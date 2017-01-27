@@ -2,14 +2,18 @@ package com.sandrios.sandriosCamera.internal;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.support.annotation.IntRange;
+import android.support.v7.app.AlertDialog;
 
 import com.gun0912.tedpermission.PermissionListener;
 import com.gun0912.tedpermission.TedPermission;
+import com.sandrios.sandriosCamera.R;
 import com.sandrios.sandriosCamera.internal.configuration.CameraConfiguration;
 import com.sandrios.sandriosCamera.internal.ui.camera.Camera1Activity;
 import com.sandrios.sandriosCamera.internal.ui.camera2.Camera2Activity;
+import com.sandrios.sandriosCamera.internal.ui.model.QualityOptions;
 import com.sandrios.sandriosCamera.internal.utils.CameraHelper;
 
 import java.util.ArrayList;
@@ -27,6 +31,7 @@ public class SandriosCamera {
     private boolean showPicker = true;
     private boolean enableImageCrop = false;
     private long videoSize = -1;
+    private QualityOptions quality = QualityOptions.QUALITY_NONE;
 
     /***
      * Creates SandriosCamera instance with default configuration set to both.
@@ -55,13 +60,19 @@ public class SandriosCamera {
         return mInstance;
     }
 
-    public SandriosCamera setVideoFileSize(int fileSize) {
+    public SandriosCamera setVideoFileSize(@IntRange(from = 0, to = 10) int fileSize) {
         this.videoSize = fileSize;
+        return mInstance;
+    }
+
+    public SandriosCamera setDefaultMediaQuality(QualityOptions quality) {
+        this.quality = quality;
         return mInstance;
     }
 
     public void launchCamera() {
         new TedPermission(mActivity)
+                .setDeniedMessage(mActivity.getString(R.string.sandriocamara_permission_denied_message))
                 .setPermissionListener(new PermissionListener() {
                     @Override
                     public void onPermissionGranted() {
@@ -88,6 +99,9 @@ public class SandriosCamera {
             } else {
                 cameraIntent = new Intent(mActivity, Camera1Activity.class);
             }
+            if (quality != QualityOptions.QUALITY_NONE) {
+                cameraIntent.putExtra(CameraConfiguration.Arguments.MEDIA_DEFAULT, quality);
+            }
             cameraIntent.putExtra(CameraConfiguration.Arguments.REQUEST_CODE, requestCode);
             cameraIntent.putExtra(CameraConfiguration.Arguments.SHOW_PICKER, showPicker);
             cameraIntent.putExtra(CameraConfiguration.Arguments.MEDIA_ACTION, mediaAction);
@@ -96,6 +110,16 @@ public class SandriosCamera {
                 cameraIntent.putExtra(CameraConfiguration.Arguments.VIDEO_FILE_SIZE, videoSize * 1024 * 1024);
             }
             mActivity.startActivityForResult(cameraIntent, requestCode);
+        } else {
+            AlertDialog.Builder b = new AlertDialog.Builder(mActivity);
+            b.setTitle(R.string.sandriocamara_no_camara_message);
+            b.setPositiveButton(R.string.sandriocamara_ok_label, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                }
+            });
+            b.show();
         }
     }
 }

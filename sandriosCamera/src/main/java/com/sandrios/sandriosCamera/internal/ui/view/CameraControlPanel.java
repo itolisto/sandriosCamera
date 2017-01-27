@@ -55,6 +55,7 @@ public class CameraControlPanel extends RelativeLayout
     private TimerTaskBase countDownTimer;
     private long maxVideoFileSize = 0;
     private String mediaFilePath;
+    private boolean showQualityChange = true;
     private boolean hasFlash = false;
     private
     @MediaActionSwitchView.MediaActionState
@@ -98,13 +99,17 @@ public class CameraControlPanel extends RelativeLayout
         setFlashModeSwitchListener(flashModeSwitchListener);
         setRecordButtonListener(recordButtonListener);
 
-        settingsButton.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_settings_white_24dp));
-        settingsButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (settingsClickListener != null) settingsClickListener.onSettingsClick();
-            }
-        });
+        if (showQualityChange) {
+            settingsButton.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_settings_white_24dp));
+            settingsButton.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if (settingsClickListener != null) settingsClickListener.onSettingsClick();
+                }
+            });
+        } else {
+            settingsButton.setVisibility(GONE);
+        }
 
         if (hasFlash)
             flashSwitchView.setVisibility(VISIBLE);
@@ -123,14 +128,18 @@ public class CameraControlPanel extends RelativeLayout
     public void lockControls() {
         cameraSwitchView.setEnabled(false);
         recordButton.setEnabled(false);
-        settingsButton.setEnabled(false);
+        if (showQualityChange) {
+            settingsButton.setEnabled(false);
+        }
         flashSwitchView.setEnabled(false);
     }
 
     public void unLockControls() {
         cameraSwitchView.setEnabled(true);
         recordButton.setEnabled(true);
-        settingsButton.setEnabled(true);
+        if (showQualityChange) {
+            settingsButton.setEnabled(true);
+        }
         flashSwitchView.setEnabled(true);
     }
 
@@ -150,6 +159,13 @@ public class CameraControlPanel extends RelativeLayout
 
     public void setMediaFilePath(final File mediaFile) {
         this.mediaFilePath = mediaFile.toString();
+    }
+
+    public void setQualityChangeEnable(final boolean show) {
+        this.showQualityChange = show;
+        if (!show) {
+            settingsButton.setVisibility(GONE);
+        }
     }
 
     public void setMaxVideoFileSize(long maxVideoFileSize) {
@@ -283,7 +299,9 @@ public class CameraControlPanel extends RelativeLayout
         recyclerView.setVisibility(VISIBLE);
         recordSizeText.setVisibility(GONE);
         cameraSwitchView.setVisibility(View.VISIBLE);
-        settingsButton.setVisibility(VISIBLE);
+        if (showQualityChange) {
+            settingsButton.setVisibility(VISIBLE);
+        }
 
         if (CameraConfiguration.MEDIA_ACTION_BOTH != mediaAction) {
             mediaActionSwitchView.setVisibility(GONE);
@@ -295,7 +313,9 @@ public class CameraControlPanel extends RelativeLayout
     public void onStartRecordingButtonPressed() {
         cameraSwitchView.setVisibility(View.GONE);
         mediaActionSwitchView.setVisibility(GONE);
-        settingsButton.setVisibility(GONE);
+        if (showQualityChange) {
+            settingsButton.setVisibility(GONE);
+        }
         recyclerView.setVisibility(GONE);
 
         if (recordButtonListener != null)

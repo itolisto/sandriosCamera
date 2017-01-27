@@ -47,7 +47,7 @@
             android:id="@+id/cancel_media_action"
             style="@style/PreviewButtonsStyle"
             android:drawableTop="@drawable/ic_clear_white_24dp"
-            android:text="@string/preview_controls_cancel" />
+            android:text="@string/sandriocamara_preview_controls_cancel" />
 
         <LinearLayout
             android:id="@+id/crop_image"
@@ -70,7 +70,7 @@
                 android:id="@+id/crop_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/preview_controls_crop"
+                android:text="@string/sandriocamara_preview_controls_crop"
                 android:textSize="10sp" />
         </LinearLayout>
 
@@ -78,12 +78,12 @@
             android:id="@+id/re_take_media"
             style="@style/PreviewButtonsStyle"
             android:drawableTop="@drawable/ic_replay_white_24dp"
-            android:text="@string/preview_controls_retake" />
+            android:text="@string/sandriocamara_preview_controls_retake" />
 
         <TextView
             android:id="@+id/confirm_media_result"
             style="@style/PreviewButtonsStyle"
             android:drawableTop="@drawable/ic_done_white_24dp"
-            android:text="@string/preview_controls_confirm" />
+            android:text="@string/sandriocamara_preview_controls_confirm" />
     </LinearLayout>
 </RelativeLayout>

@@ -15,6 +15,7 @@ import android.view.WindowManager;
 import com.sandrios.sandriosCamera.R;
 import com.sandrios.sandriosCamera.internal.configuration.CameraConfiguration;
 import com.sandrios.sandriosCamera.internal.ui.model.PhotoQualityOption;
+import com.sandrios.sandriosCamera.internal.ui.model.QualityOptions;
 import com.sandrios.sandriosCamera.internal.ui.model.VideoQualityOption;
 import com.sandrios.sandriosCamera.internal.ui.preview.PreviewActivity;
 import com.sandrios.sandriosCamera.internal.ui.view.CameraControlPanel;
@@ -49,6 +50,7 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
     protected int passedMediaQuality = CameraConfiguration.MEDIA_QUALITY_HIGHEST;
     protected CharSequence[] videoQualities;
     protected CharSequence[] photoQualities;
+    protected boolean showSettings = false;
     protected boolean enableImageCrop = false;
     protected int videoDuration = -1;
     protected long videoFileSize = -1;
@@ -124,7 +126,28 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
                 }
             }
 
-            if (bundle.containsKey(CameraConfiguration.Arguments.MEDIA_QUALITY)) {
+            if (bundle.containsKey(CameraConfiguration.Arguments.MEDIA_DEFAULT)) {
+                //noinspection ConstantConditions
+                switch ((QualityOptions)bundle.getSerializable(CameraConfiguration.Arguments.MEDIA_DEFAULT)) {
+                    case QUALITY_HIGH: {
+                        mediaQuality = CameraConfiguration.MEDIA_QUALITY_HIGH;
+                        break;
+                    }
+                    case QUALITY_MID: {
+                        mediaQuality = CameraConfiguration.MEDIA_QUALITY_MEDIUM;
+                        break;
+                    }
+                    case QUALITY_LOW: {
+                        mediaQuality = CameraConfiguration.MEDIA_QUALITY_LOW;
+                        break;
+                    }
+                    default: {
+                        showSettings = true;
+                        mediaQuality = CameraConfiguration.MEDIA_QUALITY_AUTO;
+                        break;
+                    }
+                }
+            } else if (bundle.containsKey(CameraConfiguration.Arguments.MEDIA_QUALITY)) {
                 switch (bundle.getInt(CameraConfiguration.Arguments.MEDIA_QUALITY)) {
                     case CameraConfiguration.MEDIA_QUALITY_AUTO:
                         mediaQuality = CameraConfiguration.MEDIA_QUALITY_AUTO;
@@ -148,6 +171,7 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
                         mediaQuality = CameraConfiguration.MEDIA_QUALITY_MEDIUM;
                         break;
                 }
+                showSettings = true;
                 passedMediaQuality = mediaQuality;
             }
 
@@ -203,6 +227,7 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
                     break;
             }
 
+            cameraControlPanel.setQualityChangeEnable(showSettings);
             cameraControlPanel.setRecordButtonListener(this);
             cameraControlPanel.setFlashModeSwitchListener(this);
             cameraControlPanel.setOnMediaActionStateChangeListener(this);
@@ -223,16 +248,16 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
         if (currentMediaActionState == MediaActionSwitchView.ACTION_VIDEO) {
             builder.setSingleChoiceItems(videoQualities, getVideoOptionCheckedIndex(), getVideoOptionSelectedListener());
             if (getVideoFileSize() > 0)
-                builder.setTitle(String.format(getString(R.string.settings_video_quality_title),
+                builder.setTitle(String.format(getString(R.string.sandriocamara_settings_video_quality_title),
                         "(Max " + String.valueOf(getVideoFileSize() / (1024 * 1024) + " MB)")));
             else
-                builder.setTitle(String.format(getString(R.string.settings_video_quality_title), ""));
+                builder.setTitle(String.format(getString(R.string.sandriocamara_settings_video_quality_title), ""));
         } else {
             builder.setSingleChoiceItems(photoQualities, getPhotoOptionCheckedIndex(), getPhotoOptionSelectedListener());
-            builder.setTitle(R.string.settings_photo_quality_title);
+            builder.setTitle(R.string.sandriocamara_settings_photo_quality_title);
         }
 
-        builder.setPositiveButton(R.string.ok_label, new DialogInterface.OnClickListener() {
+        builder.setPositiveButton(R.string.sandriocamara_ok_label, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
                 if (newQuality > 0 && newQuality != mediaQuality) {
@@ -243,7 +268,7 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
                 }
             }
         });
-        builder.setNegativeButton(R.string.cancel_label, new DialogInterface.OnClickListener() {
+        builder.setNegativeButton(R.string.sandriocamara_ccancel_label, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
                 dialogInterface.dismiss();

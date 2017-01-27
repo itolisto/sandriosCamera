@@ -46,6 +46,7 @@ public final class CameraConfiguration {
         String REQUEST_CODE = "com.sandrios.sandriosCamera.request_code";
         String MEDIA_ACTION = "com.sandrios.sandriosCamera.media_action";
         String MEDIA_QUALITY = "com.sandrios.sandriosCamera.camera_media_quality";
+        String MEDIA_DEFAULT = "com.sandrios.sandriosCamera.camera_media_default";
         String VIDEO_DURATION = "com.sandrios.sandriosCamera.video_duration";
         String MINIMUM_VIDEO_DURATION = "com.sandrios.sandriosCamera.minimum.video_duration";
         String VIDEO_FILE_SIZE = "com.sandrios.sandriosCamera.camera_video_file_size";

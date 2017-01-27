@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sandriocamara_preview_controls_retake">Repetir</string>
+    <string name="sandriocamara_ccancel_label">Cancelar</string>
+    <string name="sandriocamara_ok_label">Ok</string>
+    <string name="sandriocamara_preview_controls_cancel">Cancelar</string>
+    <string name="sandriocamara_preview_controls_confirm">Guardar</string>
+    <string name="sandriocamara_preview_controls_crop">Recortar</string>
+    <string name="sandriocamara_preview_controls_original_ratio_label">Original</string>
+    <string name="sandriocamara_settings_photo_quality_title">Tamaño de fotografía</string>
+    <string name="sandriocamara_settings_video_quality_title">Tamaño de video %s</string>
+    <string name="sandriocamara_permission_denied_message">No se puede usar este servicio sin autorización.\n\nVe a [Ajustes] > [Permisos] para cambiar tu preferencia.</string>
+    <string name="sandriocamara_no_camara_message">Este dispositivo no tiene cámara</string>
+</resources>
