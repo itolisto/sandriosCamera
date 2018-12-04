@@ -8,16 +8,18 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Process;
+import android.support.annotation.RestrictTo;
 import android.util.Log;
 
-import com.sandrios.sandriosCamera.internal.configuration.ConfigurationProvider;
 import com.sandrios.sandriosCamera.internal.configuration.CameraConfiguration;
+import com.sandrios.sandriosCamera.internal.configuration.ConfigurationProvider;
 import com.sandrios.sandriosCamera.internal.manager.CameraManager;
 import com.sandrios.sandriosCamera.internal.utils.Size;
 
 /**
  * Created by Arpit Gandhi on 8/14/16.
  */
+@RestrictTo(RestrictTo.Scope.LIBRARY)
 abstract class BaseCameraManager<CameraId, SurfaceListener>
         implements CameraManager<CameraId, SurfaceListener>, MediaRecorder.OnInfoListener {
 

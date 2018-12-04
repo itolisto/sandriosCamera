@@ -6,6 +6,7 @@ import android.hardware.Camera;
 import android.media.ExifInterface;
 import android.media.MediaRecorder;
 import android.os.Build;
+import android.support.annotation.RestrictTo;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
@@ -30,6 +31,7 @@ import java.util.List;
  * Created by Arpit Gandhi on 8/14/16.
  */
 @SuppressWarnings("deprecation")
+@RestrictTo(RestrictTo.Scope.LIBRARY)
 public class Camera1Manager extends BaseCameraManager<Integer, SurfaceHolder.Callback>
         implements SurfaceHolder.Callback, Camera.PictureCallback {
 
@@ -39,6 +41,7 @@ public class Camera1Manager extends BaseCameraManager<Integer, SurfaceHolder.Cal
     private Surface surface;
     private int orientation;
     private int displayRotation = 0;
+    private boolean safeToTakePicture = false;
 
     private File outputPath;
     private CameraVideoListener videoListener;
@@ -114,8 +117,11 @@ public class Camera1Manager extends BaseCameraManager<Integer, SurfaceHolder.Cal
         backgroundHandler.post(new Runnable() {
             @Override
             public void run() {
-                setCameraPhotoQuality(camera);
-                camera.takePicture(null, null, currentInstance);
+                if (safeToTakePicture) {
+                    setCameraPhotoQuality(camera);
+                    camera.takePicture(null, null, currentInstance);
+                    safeToTakePicture = false;
+                }
             }
         });
     }
@@ -219,9 +225,7 @@ public class Camera1Manager extends BaseCameraManager<Integer, SurfaceHolder.Cal
             List<Size> previewSizes = Size.fromList(camera.getParameters().getSupportedPreviewSizes());
             List<Size> pictureSizes = Size.fromList(camera.getParameters().getSupportedPictureSizes());
             List<Size> videoSizes;
-            if (Build.VERSION.SDK_INT > 10)
-                videoSizes = Size.fromList(camera.getParameters().getSupportedVideoSizes());
-            else videoSizes = previewSizes;
+            videoSizes = Size.fromList(camera.getParameters().getSupportedVideoSizes());
 
             videoSize = CameraHelper.getSizeWithClosestRatio(
                     (videoSizes == null || videoSizes.isEmpty()) ? previewSizes : videoSizes,
@@ -331,7 +335,8 @@ public class Camera1Manager extends BaseCameraManager<Integer, SurfaceHolder.Cal
             if (configurationProvider.getMediaAction() == CameraConfiguration.MEDIA_ACTION_PHOTO
                     || configurationProvider.getMediaAction() == CameraConfiguration.MEDIA_ACTION_BOTH)
                 turnPhotoCameraFeaturesOn(camera, parameters);
-            else if (configurationProvider.getMediaAction() == CameraConfiguration.MEDIA_ACTION_PHOTO)
+            else if (configurationProvider.getMediaAction() == CameraConfiguration.MEDIA_ACTION_PHOTO
+                    || configurationProvider.getMediaAction() == CameraConfiguration.MEDIA_ACTION_BOTH)
                 turnVideoCameraFeaturesOn(camera, parameters);
 
             int rotation = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
@@ -360,12 +365,6 @@ public class Camera1Manager extends BaseCameraManager<Integer, SurfaceHolder.Cal
 
             this.camera.setDisplayOrientation(displayRotation);
 
-            if (Build.VERSION.SDK_INT > 13
-                    && (configurationProvider.getMediaAction() == CameraConfiguration.MEDIA_ACTION_VIDEO
-                    || configurationProvider.getMediaAction() == CameraConfiguration.MEDIA_ACTION_BOTH)) {
-//                parameters.setRecordingHint(true);
-            }
-
             if (Build.VERSION.SDK_INT > 14
                     && parameters.isVideoStabilizationSupported()
                     && (configurationProvider.getMediaAction() == CameraConfiguration.MEDIA_ACTION_VIDEO
@@ -379,6 +378,7 @@ public class Camera1Manager extends BaseCameraManager<Integer, SurfaceHolder.Cal
             camera.setParameters(parameters);
             camera.setPreviewDisplay(surfaceHolder);
             camera.startPreview();
+            safeToTakePicture = true;
 
         } catch (IOException error) {
             Log.d(TAG, "Error setting camera preview: " + error.getMessage());

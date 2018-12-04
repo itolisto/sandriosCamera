@@ -8,13 +8,14 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.RestrictTo;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import com.sandrios.sandriosCamera.R;
-import com.sandrios.sandriosCamera.internal.configuration.ConfigurationProvider;
 import com.sandrios.sandriosCamera.internal.configuration.CameraConfiguration;
+import com.sandrios.sandriosCamera.internal.configuration.ConfigurationProvider;
 import com.sandrios.sandriosCamera.internal.controller.CameraController;
 import com.sandrios.sandriosCamera.internal.controller.view.CameraView;
 import com.sandrios.sandriosCamera.internal.ui.view.AspectFrameLayout;
@@ -22,9 +23,10 @@ import com.sandrios.sandriosCamera.internal.utils.Size;
 import com.sandrios.sandriosCamera.internal.utils.Utils;
 
 /**
+ * Main sandrioscamera activity handling all the transactions
  * Created by Arpit Gandhi on 12/1/16.
  */
-
+@RestrictTo(RestrictTo.Scope.LIBRARY)
 abstract public class SandriosCameraActivity<CameraId> extends Activity
         implements ConfigurationProvider, CameraView, SensorEventListener {
 
@@ -114,7 +116,11 @@ abstract public class SandriosCameraActivity<CameraId> extends Activity
         previewContainer.removeAllViews();
         previewContainer.addView(preview);
 
-        previewContainer.setAspectRatio(previewSize.getHeight() / (double) previewSize.getWidth());
+        if (previewSize.getWidth() > previewSize.getHeight()) {
+            previewContainer.setAspectRatio(previewSize.getHeight() / (double) previewSize.getWidth());
+        } else {
+            previewContainer.setAspectRatio(previewSize.getWidth() / (double) previewSize.getHeight());
+        }
     }
 
     public final void clearCameraPreview() {

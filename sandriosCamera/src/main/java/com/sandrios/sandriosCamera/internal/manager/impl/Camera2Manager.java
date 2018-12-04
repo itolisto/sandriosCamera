@@ -20,6 +20,7 @@ import android.media.MediaRecorder;
 import android.os.Build;
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
+import android.support.annotation.RestrictTo;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Display;
@@ -27,8 +28,8 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.WindowManager;
 
-import com.sandrios.sandriosCamera.internal.configuration.ConfigurationProvider;
 import com.sandrios.sandriosCamera.internal.configuration.CameraConfiguration;
+import com.sandrios.sandriosCamera.internal.configuration.ConfigurationProvider;
 import com.sandrios.sandriosCamera.internal.manager.listener.CameraCloseListener;
 import com.sandrios.sandriosCamera.internal.manager.listener.CameraOpenListener;
 import com.sandrios.sandriosCamera.internal.manager.listener.CameraPhotoListener;
@@ -49,6 +50,7 @@ import java.util.Objects;
 /**
  * Created by Arpit Gandhi on 8/9/16.
  */
+@RestrictTo(RestrictTo.Scope.LIBRARY)
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
 public final class Camera2Manager extends BaseCameraManager<String, TextureView.SurfaceTextureListener>
         implements ImageReader.OnImageAvailableListener, TextureView.SurfaceTextureListener {
@@ -80,7 +82,7 @@ public final class Camera2Manager extends BaseCameraManager<String, TextureView.
     private ImageReader imageReader;
     private CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
         @Override
-        public void onOpened(CameraDevice cameraDevice) {
+        public void onOpened(@NonNull CameraDevice cameraDevice) {
             currentInstance.cameraDevice = cameraDevice;
             if (cameraOpenListener != null) {
                 uiHandler.post(new Runnable() {
@@ -94,7 +96,7 @@ public final class Camera2Manager extends BaseCameraManager<String, TextureView.
         }
 
         @Override
-        public void onDisconnected(CameraDevice cameraDevice) {
+        public void onDisconnected(@NonNull CameraDevice cameraDevice) {
             cameraDevice.close();
             currentInstance.cameraDevice = null;
 
@@ -107,7 +109,7 @@ public final class Camera2Manager extends BaseCameraManager<String, TextureView.
         }
 
         @Override
-        public void onError(CameraDevice cameraDevice, int error) {
+        public void onError(@NonNull CameraDevice cameraDevice, int error) {
             cameraDevice.close();
             currentInstance.cameraDevice = null;
 
@@ -296,6 +298,7 @@ public final class Camera2Manager extends BaseCameraManager<String, TextureView.
                                     try {
                                         captureSession.setRepeatingRequest(previewRequestBuilder.build(), null, backgroundHandler);
                                     } catch (Exception e) {
+                                        e.printStackTrace();
                                     }
 
                                     try {
@@ -661,6 +664,7 @@ public final class Camera2Manager extends BaseCameraManager<String, TextureView.
             previewState = STATE_WAITING_PRE_CAPTURE;
             captureSession.capture(previewRequestBuilder.build(), captureCallback, backgroundHandler);
         } catch (CameraAccessException e) {
+            e.printStackTrace();
         }
     }
 

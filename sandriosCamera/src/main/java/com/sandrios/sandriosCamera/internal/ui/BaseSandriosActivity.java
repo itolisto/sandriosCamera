@@ -1,19 +1,26 @@
 package com.sandrios.sandriosCamera.internal.ui;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ContentResolver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.support.annotation.RestrictTo;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.webkit.MimeTypeMap;
 
 import com.sandrios.sandriosCamera.R;
+import com.sandrios.sandriosCamera.internal.SandriosCamera;
 import com.sandrios.sandriosCamera.internal.configuration.CameraConfiguration;
+import com.sandrios.sandriosCamera.internal.manager.CameraOutputModel;
 import com.sandrios.sandriosCamera.internal.ui.model.PhotoQualityOption;
 import com.sandrios.sandriosCamera.internal.ui.model.QualityOptions;
 import com.sandrios.sandriosCamera.internal.ui.model.VideoQualityOption;
@@ -23,13 +30,17 @@ import com.sandrios.sandriosCamera.internal.ui.view.CameraSwitchView;
 import com.sandrios.sandriosCamera.internal.ui.view.FlashSwitchView;
 import com.sandrios.sandriosCamera.internal.ui.view.MediaActionSwitchView;
 import com.sandrios.sandriosCamera.internal.ui.view.RecordButton;
+import com.sandrios.sandriosCamera.internal.utils.SandriosBus;
 import com.sandrios.sandriosCamera.internal.utils.Size;
 import com.sandrios.sandriosCamera.internal.utils.Utils;
+
+import java.io.File;
 
 /**
  * Created by Arpit Gandhi on 12/1/16.
  */
 
+@RestrictTo(RestrictTo.Scope.LIBRARY)
 public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActivity<CameraId>
         implements
         RecordButton.RecordButtonListener,
@@ -41,7 +52,6 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
     public static final int ACTION_RETAKE = 901;
     public static final int ACTION_CANCEL = 902;
     protected static final int REQUEST_PREVIEW_CODE = 1001;
-    protected int requestCode = -1;
     @CameraConfiguration.MediaAction
     protected int mediaAction = CameraConfiguration.MEDIA_ACTION_BOTH;
     @CameraConfiguration.MediaQuality
@@ -54,19 +64,20 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
     protected boolean enableImageCrop = false;
     protected int videoDuration = -1;
     protected long videoFileSize = -1;
+    protected boolean autoRecord = false;
     protected int minimumVideoDuration = -1;
     protected boolean showPicker = true;
+    protected int type;
     @MediaActionSwitchView.MediaActionState
     protected int currentMediaActionState;
     @CameraSwitchView.CameraType
     protected int currentCameraType = CameraSwitchView.CAMERA_TYPE_REAR;
     @CameraConfiguration.MediaQuality
     protected int newQuality = -1;
-    private CameraControlPanel cameraControlPanel;
-    private AlertDialog settingsDialog;
-
     @CameraConfiguration.FlashMode
     protected int flashMode = CameraConfiguration.FLASH_MODE_AUTO;
+    private CameraControlPanel cameraControlPanel;
+    private AlertDialog settingsDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,9 +120,6 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
 
     private void extractConfiguration(Bundle bundle) {
         if (bundle != null) {
-            if (bundle.containsKey(CameraConfiguration.Arguments.REQUEST_CODE))
-                requestCode = bundle.getInt(CameraConfiguration.Arguments.REQUEST_CODE);
-
             if (bundle.containsKey(CameraConfiguration.Arguments.MEDIA_ACTION)) {
                 switch (bundle.getInt(CameraConfiguration.Arguments.MEDIA_ACTION)) {
                     case CameraConfiguration.MEDIA_ACTION_PHOTO:
@@ -187,6 +195,9 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
             if (bundle.containsKey(CameraConfiguration.Arguments.SHOW_PICKER))
                 showPicker = bundle.getBoolean(CameraConfiguration.Arguments.SHOW_PICKER);
 
+            if (bundle.containsKey(CameraConfiguration.Arguments.PICKER_TYPE))
+                type = bundle.getInt(CameraConfiguration.Arguments.PICKER_TYPE);
+
             if (bundle.containsKey(CameraConfiguration.Arguments.ENABLE_CROP))
                 enableImageCrop = bundle.getBoolean(CameraConfiguration.Arguments.ENABLE_CROP);
 
@@ -205,12 +216,18 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
                         flashMode = CameraConfiguration.FLASH_MODE_AUTO;
                         break;
                 }
+            if (bundle.containsKey(CameraConfiguration.Arguments.AUTO_RECORD)) {
+                if (mediaAction == CameraConfiguration.MEDIA_ACTION_VIDEO) {
+                    autoRecord = bundle.getBoolean(CameraConfiguration.Arguments.AUTO_RECORD);
+                }
+            }
         }
     }
 
     @Override
     View getUserContentView(LayoutInflater layoutInflater, ViewGroup parent) {
         cameraControlPanel = (CameraControlPanel) layoutInflater.inflate(R.layout.user_control_layout, parent, false);
+        cameraControlPanel.postInit(type);
 
         if (cameraControlPanel != null) {
             cameraControlPanel.setup(getMediaAction());
@@ -237,6 +254,15 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
             cameraControlPanel.setSettingsClickListener(this);
             cameraControlPanel.setPickerItemClickListener(this);
             cameraControlPanel.shouldShowCrop(enableImageCrop);
+
+            if (autoRecord) {
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        cameraControlPanel.startRecording();
+                    }
+                }, 1500);
+            }
         }
         return cameraControlPanel;
     }
@@ -285,11 +311,9 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
 
     @Override
     public void onItemClick(Uri filePath) {
-        Intent resultIntent = new Intent();
-        resultIntent.putExtra(CameraConfiguration.Arguments.FILE_PATH,
-                filePath.toString());
-        setResult(RESULT_OK, resultIntent);
-        finish();
+        int mimeType = getMimeType(getActivity(), filePath.toString());
+        SandriosBus.getBus().send(new CameraOutputModel(mimeType, filePath.toString()));
+        this.finish();
     }
 
     @Override
@@ -351,11 +375,6 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
     protected void onScreenRotation(int degrees) {
         cameraControlPanel.rotateControls(degrees);
         rotateSettingsDialog(degrees);
-    }
-
-    @Override
-    public int getRequestCode() {
-        return requestCode;
     }
 
     @Override
@@ -444,14 +463,12 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
         if (resultCode == RESULT_OK) {
             if (requestCode == REQUEST_PREVIEW_CODE) {
                 if (PreviewActivity.isResultConfirm(data)) {
-                    Intent resultIntent = new Intent();
-                    resultIntent.putExtra(CameraConfiguration.Arguments.FILE_PATH,
-                            PreviewActivity.getMediaFilePatch(data));
-                    setResult(RESULT_OK, resultIntent);
-                    finish();
+                    String path = PreviewActivity.getMediaFilePatch(data);
+                    int mimeType = getMimeType(getActivity(), path);
+                    SandriosBus.getBus().send(new CameraOutputModel(mimeType, path));
+                    this.finish();
                 } else if (PreviewActivity.isResultCancel(data)) {
-                    setResult(RESULT_CANCELED);
-                    finish();
+                    this.finish();
                 } else if (PreviewActivity.isResultRetake(data)) {
                     //ignore, just proceed the camera
                 }
@@ -459,8 +476,30 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
         }
     }
 
+    public static int getMimeType(Context context, String path) {
+        Uri uri = Uri.fromFile(new File(path));
+        String extension;
+        //Check uri format to avoid null
+        if (uri.getScheme().equals(ContentResolver.SCHEME_CONTENT)) {
+            //If scheme is a content
+            final MimeTypeMap mime = MimeTypeMap.getSingleton();
+            extension = mime.getExtensionFromMimeType(context.getContentResolver().getType(uri));
+        } else {
+            //If scheme is a File
+            //This will replace white spaces with %20 and also other special characters. This will avoid returning null values on file name with spaces and special characters.
+            extension = MimeTypeMap.getFileExtensionFromUrl(path);
+        }
+        String mimeTypeString
+                = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        int mimeType = SandriosCamera.MediaType.PHOTO;
+        if (mimeTypeString.toLowerCase().contains("video")) {
+            mimeType = SandriosCamera.MediaType.VIDEO;
+        }
+        return mimeType;
+    }
+
     private void rotateSettingsDialog(int degrees) {
-        if (settingsDialog != null && settingsDialog.isShowing() && Build.VERSION.SDK_INT > 10) {
+        if (settingsDialog != null && settingsDialog.isShowing()) {
             ViewGroup dialogView = (ViewGroup) settingsDialog.getWindow().getDecorView();
             for (int i = 0; i < dialogView.getChildCount(); i++) {
                 dialogView.getChildAt(i).setRotation(degrees);
@@ -495,6 +534,7 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
 
     protected DialogInterface.OnClickListener getVideoOptionSelectedListener() {
         return new DialogInterface.OnClickListener() {
+            @SuppressLint("WrongConstant")
             @Override
             public void onClick(DialogInterface dialogInterface, int index) {
                 newQuality = ((VideoQualityOption) videoQualities[index]).getMediaQuality();
@@ -504,6 +544,7 @@ public abstract class BaseSandriosActivity<CameraId> extends SandriosCameraActiv
 
     protected DialogInterface.OnClickListener getPhotoOptionSelectedListener() {
         return new DialogInterface.OnClickListener() {
+            @SuppressLint("WrongConstant")
             @Override
             public void onClick(DialogInterface dialogInterface, int index) {
                 newQuality = ((PhotoQualityOption) photoQualities[index]).getMediaQuality();

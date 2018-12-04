@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.Build;
 import android.os.FileObserver;
 import android.os.Handler;
 import android.os.Looper;
@@ -24,6 +23,7 @@ import com.sandrios.sandriosCamera.internal.configuration.CameraConfiguration;
 import com.sandrios.sandriosCamera.internal.utils.DateTimeUtils;
 
 import java.io.File;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -79,8 +79,6 @@ public class CameraControlPanel extends RelativeLayout
 
         LayoutInflater.from(context).inflate(R.layout.camera_control_panel_layout, this);
         setBackgroundColor(Color.TRANSPARENT);
-        imageGalleryAdapter = new ImageGalleryAdapter(context);
-
         settingsButton = (ImageButton) findViewById(R.id.settings_view);
         cameraSwitchView = (CameraSwitchView) findViewById(R.id.front_back_camera_switcher);
         mediaActionSwitchView = (MediaActionSwitchView) findViewById(R.id.photo_video_camera_switcher);
@@ -90,7 +88,6 @@ public class CameraControlPanel extends RelativeLayout
         recordSizeText = (TextView) findViewById(R.id.record_size_mb_text);
         recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false));
-        recyclerView.setAdapter(imageGalleryAdapter);
         cameraSwitchView.setOnCameraTypeChangeListener(onCameraTypeChangeListener);
         mediaActionSwitchView.setOnMediaActionStateChangeListener(this);
 
@@ -116,7 +113,14 @@ public class CameraControlPanel extends RelativeLayout
         else flashSwitchView.setVisibility(GONE);
 
         countDownTimer = new TimerTask(recordDurationText);
+    }
 
+    public void postInit(int mediatype) {
+        if (mediatype != 0 && mediatype == CameraConfiguration.VIDEO)
+            imageGalleryAdapter = new ImageGalleryAdapter(context, CameraConfiguration.VIDEO);
+        else
+            imageGalleryAdapter = new ImageGalleryAdapter(context);
+        recyclerView.setAdapter(imageGalleryAdapter);
         imageGalleryAdapter.setOnItemClickListener(new ImageGalleryAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(View view, int position) {
@@ -201,13 +205,11 @@ public class CameraControlPanel extends RelativeLayout
     }
 
     public void rotateControls(int rotation) {
-        if (Build.VERSION.SDK_INT > 10) {
-            cameraSwitchView.setRotation(rotation);
-            mediaActionSwitchView.setRotation(rotation);
-            flashSwitchView.setRotation(rotation);
-            recordDurationText.setRotation(rotation);
-            recordSizeText.setRotation(rotation);
-        }
+        cameraSwitchView.setRotation(rotation);
+        mediaActionSwitchView.setRotation(rotation);
+        flashSwitchView.setRotation(rotation);
+        recordDurationText.setRotation(rotation);
+        recordSizeText.setRotation(rotation);
     }
 
     public void setOnMediaActionStateChangeListener(MediaActionSwitchView.OnMediaActionStateChangeListener onMediaActionStateChangeListener) {
@@ -269,7 +271,6 @@ public class CameraControlPanel extends RelativeLayout
             }
         }
         countDownTimer.start();
-
     }
 
     public void allowRecord(boolean isAllowed) {
@@ -336,6 +337,13 @@ public class CameraControlPanel extends RelativeLayout
             onMediaActionStateChangeListener.onMediaActionChanged(this.mediaActionState);
     }
 
+    public void setMediaType(int type) {
+    }
+
+    public void startRecording() {
+        recordButton.performClick();
+    }
+
     public interface SettingsClickListener {
         void onSettingsClick();
     }
@@ -345,13 +353,13 @@ public class CameraControlPanel extends RelativeLayout
     }
 
     abstract class TimerTaskBase {
-        protected Handler handler = new Handler(Looper.getMainLooper());
-        protected TextView timerView;
-        protected boolean alive = false;
-        protected long recordingTimeSeconds = 0;
-        protected long recordingTimeMinutes = 0;
+        Handler handler = new Handler(Looper.getMainLooper());
+        TextView timerView;
+        boolean alive = false;
+        long recordingTimeSeconds = 0;
+        long recordingTimeMinutes = 0;
 
-        public TimerTaskBase(TextView timerView) {
+        TimerTaskBase(TextView timerView) {
             this.timerView = timerView;
         }
 
@@ -364,7 +372,7 @@ public class CameraControlPanel extends RelativeLayout
 
         private int maxDurationMilliseconds = 0;
 
-        public CountdownTask(TextView timerView, int maxDurationMilliseconds) {
+        CountdownTask(TextView timerView, int maxDurationMilliseconds) {
             super(timerView);
             this.maxDurationMilliseconds = maxDurationMilliseconds;
         }
@@ -377,7 +385,7 @@ public class CameraControlPanel extends RelativeLayout
             int millis = (int) recordingTimeSeconds * 1000;
 
             timerView.setText(
-                    String.format("%02d:%02d",
+                    String.format(Locale.ENGLISH, "%02d:%02d",
                             TimeUnit.MILLISECONDS.toMinutes(millis),
                             TimeUnit.MILLISECONDS.toSeconds(millis) -
                                     TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis))
@@ -402,7 +410,7 @@ public class CameraControlPanel extends RelativeLayout
             recordingTimeSeconds = maxDurationMilliseconds / 1000;
             timerView.setTextColor(Color.WHITE);
             timerView.setText(
-                    String.format("%02d:%02d",
+                    String.format(Locale.ENGLISH, "%02d:%02d",
                             TimeUnit.MILLISECONDS.toMinutes(maxDurationMilliseconds),
                             TimeUnit.MILLISECONDS.toSeconds(maxDurationMilliseconds) -
                                     TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(maxDurationMilliseconds))
@@ -414,7 +422,7 @@ public class CameraControlPanel extends RelativeLayout
 
     private class TimerTask extends TimerTaskBase implements Runnable {
 
-        public TimerTask(TextView timerView) {
+        TimerTask(TextView timerView) {
             super(timerView);
         }
 
@@ -427,7 +435,7 @@ public class CameraControlPanel extends RelativeLayout
                 recordingTimeMinutes++;
             }
             timerView.setText(
-                    String.format("%02d:%02d", recordingTimeMinutes, recordingTimeSeconds));
+                    String.format(Locale.ENGLISH, "%02d:%02d", recordingTimeMinutes, recordingTimeSeconds));
             if (alive) handler.postDelayed(this, DateTimeUtils.SECOND);
         }
 
@@ -436,7 +444,7 @@ public class CameraControlPanel extends RelativeLayout
             recordingTimeMinutes = 0;
             recordingTimeSeconds = 0;
             timerView.setText(
-                    String.format("%02d:%02d", recordingTimeMinutes, recordingTimeSeconds));
+                    String.format(Locale.ENGLISH, "%02d:%02d", recordingTimeMinutes, recordingTimeSeconds));
             timerView.setVisibility(View.VISIBLE);
             handler.postDelayed(this, DateTimeUtils.SECOND);
         }
